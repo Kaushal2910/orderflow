@@ -1,0 +1,15 @@
+# node
+ui/node_modules/
+ui/dist/
+# java build output
+backend/*/target/
+# local service runs
+backend/logs/
+*.log
+.env
+# reference art stays local-only
+theatre image.png
+# os / editor
+.DS_Store
+Thumbs.db
+.vscode/
