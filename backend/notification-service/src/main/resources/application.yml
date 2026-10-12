@@ -1,0 +1,8 @@
+server:
+  port: 8084
+spring:
+  application:
+    name: notification-service
+kafka:
+  autostart: false
+# --- prod (docker): kafka.autostart=true, spring.kafka.bootstrap-servers=kafka:9092 ---
