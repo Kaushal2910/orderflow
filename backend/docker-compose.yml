@@ -1,0 +1,58 @@
+# Optional full-stack run. You do NOT need this for local dev
+# (UI mock mode + H2-backed services run without docker).
+# Prod-grade run: docker compose up --build
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: orderflow
+      POSTGRES_PASSWORD: orderflow
+      POSTGRES_DB: orderflow
+    volumes: [pgdata:/var/lib/postgresql/data]
+    ports: ["5432:5432"]
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+  kafka:
+    image: bitnami/kafka:3.7
+    environment:
+      KAFKA_ENABLE_KRAFT: "yes"
+      KAFKA_CFG_NODE_ID: 1
+      KAFKA_CFG_PROCESS_ROLES: broker,controller
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CFG_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      ALLOW_PLAINTEXT_LISTENER: "yes"
+    ports: ["9092:9092"]
+
+  gateway-service:
+    build: { context: ./gateway-service, dockerfile: ../Dockerfile.template }
+    ports: ["8080:8080"]
+    environment: { JWT_SECRET: ${JWT_SECRET:-orderflow-dev-secret-please-change-32chars} }
+    depends_on: [order-service, inventory-service, payment-service]
+  order-service:
+    build: { context: ./order-service, dockerfile: ../Dockerfile.template }
+    ports: ["8081:8081"]
+    environment: { SPRING_PROFILES_ACTIVE: prod }
+    depends_on: [postgres, kafka]
+  inventory-service:
+    build: { context: ./inventory-service, dockerfile: ../Dockerfile.template }
+    ports: ["8082:8082"]
+    environment: { SPRING_PROFILES_ACTIVE: prod }
+    depends_on: [postgres, redis, kafka]
+  payment-service:
+    build: { context: ./payment-service, dockerfile: ../Dockerfile.template }
+    ports: ["8083:8083"]
+    depends_on: [kafka]
+  notification-service:
+    build: { context: ./notification-service, dockerfile: ../Dockerfile.template }
+    ports: ["8084:8084"]
+    environment: { KAFKA_AUTOSTART: "true" }
+    depends_on: [kafka]
+
+  ui:
+    build: { context: ../ui }
+    ports: ["5173:80"]
+    environment: { VITE_GATEWAY_URL: http://gateway-service:8080 }
+
+volumes: { pgdata: {} }

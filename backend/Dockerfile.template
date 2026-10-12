@@ -1,0 +1,7 @@
+# Build stage needs JDK17 + Maven available in CI / docker build.
+# Local dev does NOT need docker: run services directly, UI works in mock mode.
+FROM eclipse-temurin:17-jre AS run
+WORKDIR /app
+ARG JAR=target/*.jar
+COPY ${JAR} app.jar
+ENTRYPOINT ["java","-jar","/app/app.jar"]
